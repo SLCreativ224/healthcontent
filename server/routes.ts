@@ -557,6 +557,63 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     }
   });
 
+  // ─── AI: Image Generation (DALL-E 3) ─────────────────────────────────────
+
+  app.post("/api/ai/image", requireAuth, async (req, res) => {
+    try {
+      const { prompt, style, brandColors, practiceName } = z.object({
+        prompt: z.string().min(1),
+        style: z.string().optional(),
+        brandColors: z.array(z.string()).optional(),
+        practiceName: z.string().optional(),
+      }).parse(req.body);
+
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        // Return a mock placeholder image URL when no API key
+        return res.json({
+          url: `https://placehold.co/1024x1024/6B5CE7/ffffff?text=AI+Image+%28Add+OpenAI+Key%29`,
+          revised_prompt: prompt,
+        });
+      }
+
+      // Build a rich DALL-E prompt incorporating brand identity
+      const colorContext = brandColors?.length
+        ? `Brand colors: ${brandColors.join(", ")}.`
+        : "";
+      const fullPrompt = `Professional social media graphic for a healthcare practice called "${practiceName || "the practice"}". ${prompt}. ${colorContext} Style: ${style || "modern, clean, professional, high-end healthcare marketing"}. High quality, photorealistic or polished graphic design aesthetic. No text overlays.`;
+
+      const response = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "dall-e-3",
+          prompt: fullPrompt,
+          n: 1,
+          size: "1024x1024",
+          quality: "hd",
+          response_format: "url",
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`DALL-E error: ${err}`);
+      }
+
+      const data = await response.json() as any;
+      res.json({
+        url: data.data[0].url,
+        revised_prompt: data.data[0].revised_prompt,
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // ─── Meta ─────────────────────────────────────────────────────────────────
 
   app.get("/api/meta", (_req, res) => {

@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, PlusCircle, BookOpen, FolderOpen,
   CalendarDays, LogOut, Sun, Moon, Menu, X, Sparkles, SplitSquareHorizontal, Settings,
-  Palette, Video, Building2, Crown, CreditCard, ShieldCheck
+  Palette, Video, Building2, Crown, CreditCard, ShieldCheck, Image
 } from "lucide-react";
 import { useState } from "react";
 import type { Practice } from "@shared/schema";
@@ -26,6 +26,7 @@ const NAV_ITEMS = [
 
 const TOOLS_ITEMS = [
   { href: "/app/design", label: "Design Editor", icon: Palette, group: "tools" },
+  { href: "/app/graphics", label: "Graphic Studio", icon: Image, group: "tools" },
   { href: "/app/practices", label: "Practices", icon: Building2, group: "tools", pro: true },
   { href: "/app/billing", label: "Billing", icon: CreditCard, group: "tools" },
 ];

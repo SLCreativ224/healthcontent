@@ -20,6 +20,7 @@ import BeforeAfter from "@/pages/BeforeAfter";
 import BeforeAfterLibrary from "@/pages/BeforeAfterLibrary";
 import ManagePractices from "@/pages/ManagePractices";
 import DesignEditor from "@/pages/DesignEditor";
+import GraphicStudio from "@/pages/GraphicStudio";
 import VideoReels from "@/pages/VideoReels";
 import BillingPage from "@/pages/BillingPage";
 import AdminPanel from "@/pages/AdminPanel";
@@ -80,6 +81,7 @@ function AppRoutes() {
       <Route path="/app/before-after" component={BeforeAfter} />
       <Route path="/app/practices" component={ManagePractices} />
       <Route path="/app/design" component={DesignEditor} />
+      <Route path="/app/graphics" component={GraphicStudio} />
       <Route path="/app/video" component={VideoReels} />
       <Route path="/app/billing" component={BillingPage} />
       <Route component={NotFound} />
@@ -106,8 +108,8 @@ export default function App() {
               {/* Login / register — public */}
               <Route path="/login" component={AuthPage} />
               {/* All authenticated app routes — must come before / */}
-              <Route path="/app" component={AppRoutes} />
               <Route path="/app/:rest*" component={AppRoutes} />
+              <Route path="/app" component={AppRoutes} />
               {/* Public marketing homepage — last so it doesn't swallow /app */}
               <Route path="/" component={HomePage} />
               {/* Fallback */}

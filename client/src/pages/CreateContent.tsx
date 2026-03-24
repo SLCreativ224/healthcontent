@@ -63,7 +63,7 @@ export default function CreateContent() {
     onSuccess: (item: ContentItem) => {
       qc.invalidateQueries({ queryKey: ["/api/content"] });
       toast({ title: "Content generated" });
-      navigate(`/app/content/${item.id}`);
+      navigate(`/app/library`);
     },
     onError: (err: any) =>
       toast({ title: "Generation failed", description: err.message, variant: "destructive" }),
