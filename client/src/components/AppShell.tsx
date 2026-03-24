@@ -16,18 +16,24 @@ import { TokenBalancePill, LowTokenBanner, BuyTokensModal } from "./TokenWidget"
 
 const NAV_ITEMS = [
   { href: "/app", label: "Dashboard", icon: LayoutDashboard, group: "main" },
-  { href: "/app/create", label: "Create", icon: PlusCircle, group: "main" },
-  { href: "/app/before-after", label: "Before & After", icon: SplitSquareHorizontal, group: "main" },
-  { href: "/app/video", label: "Video & Reels", icon: Video, group: "main" },
-  { href: "/app/library", label: "Library", icon: BookOpen, group: "main" },
-  { href: "/app/campaigns", label: "Campaigns", icon: FolderOpen, group: "main" },
-  { href: "/app/calendar", label: "Calendar", icon: CalendarDays, group: "main" },
+];
+
+const CREATE_ITEMS = [
+  { href: "/app/create", label: "Write Caption", icon: PlusCircle, group: "create" },
+  { href: "/app/graphics", label: "Graphic Studio", icon: Image, group: "create" },
+  { href: "/app/before-after", label: "Before & After", icon: SplitSquareHorizontal, group: "create" },
+  { href: "/app/video", label: "Video & Reels", icon: Video, group: "create" },
+];
+
+const LIBRARY_ITEMS = [
+  { href: "/app/library", label: "Content Library", icon: BookOpen, group: "library" },
+  { href: "/app/campaigns", label: "Campaigns", icon: FolderOpen, group: "library" },
+  { href: "/app/calendar", label: "Calendar", icon: CalendarDays, group: "library" },
 ];
 
 const TOOLS_ITEMS = [
-  { href: "/app/design", label: "Design Editor", icon: Palette, group: "tools" },
-  { href: "/app/graphics", label: "Graphic Studio", icon: Image, group: "tools" },
-  { href: "/app/practices", label: "Practices", icon: Building2, group: "tools", pro: true },
+  { href: "/app/design", label: "Brand & Design", icon: Palette, group: "tools" },
+  { href: "/app/practices", label: "Practice Setup", icon: Building2, group: "tools", pro: true },
   { href: "/app/billing", label: "Billing", icon: CreditCard, group: "tools" },
 ];
 
@@ -119,16 +125,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Nav */}
       <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto">
-        <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
-          Content
-        </p>
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
           <NavLink key={href} href={href} label={label} Icon={Icon} />
         ))}
         <div className="h-px bg-border mx-3 my-3" />
-        <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
-          Tools
-        </p>
+        <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Create</p>
+        {CREATE_ITEMS.map(({ href, label, icon: Icon }) => (
+          <NavLink key={href} href={href} label={label} Icon={Icon} />
+        ))}
+        <div className="h-px bg-border mx-3 my-3" />
+        <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Library</p>
+        {LIBRARY_ITEMS.map(({ href, label, icon: Icon }) => (
+          <NavLink key={href} href={href} label={label} Icon={Icon} />
+        ))}
+        <div className="h-px bg-border mx-3 my-3" />
+        <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">Settings</p>
         {TOOLS_ITEMS.map(({ href, label, icon: Icon, pro }) => (
           <NavLink key={href} href={href} label={label} Icon={Icon} pro={pro} />
         ))}

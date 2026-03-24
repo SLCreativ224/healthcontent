@@ -737,6 +737,78 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     }
   });
 
+  // ─── AI: Brand-style an uploaded photo ────────────────────────────────
+
+  app.post("/api/ai/brand-style", requireAuth, async (req, res) => {
+    try {
+      const { imageBase64, brandColors, practiceName, brandFeel } = z.object({
+        imageBase64: z.string(),
+        brandColors: z.array(z.string()).optional(),
+        practiceName: z.string().optional(),
+        brandFeel: z.string().optional(),
+      }).parse(req.body);
+
+      const replicateKey = process.env.REPLICATE_API_TOKEN;
+      if (!replicateKey) {
+        return res.status(400).json({ message: "Replicate API key not configured" });
+      }
+
+      const colorDesc = brandColors?.filter(c => c && c !== '#ffffff').join(", ") || "professional healthcare colors";
+      const prompt = `Professional healthcare social media photo, color graded to use ${colorDesc} as the dominant color palette, ${brandFeel || "modern and clean"} aesthetic, high-end photography, perfect for ${practiceName || "a healthcare practice"} social media. Enhance lighting, make it look premium and polished.`;
+
+      // Use Flux Pro img2img via Replicate
+      const startRes = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-pro/predictions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${replicateKey}`,
+          "Prefer": "wait=60",
+        },
+        body: JSON.stringify({
+          input: {
+            prompt,
+            image: imageBase64,
+            prompt_strength: 0.4, // 0 = keep original, 1 = full restyle
+            width: 1024,
+            height: 1024,
+            steps: 25,
+            guidance: 3.5,
+            output_format: "webp",
+            output_quality: 90,
+          },
+        }),
+      });
+
+      if (!startRes.ok) {
+        const errText = await startRes.text();
+        // Fallback: just return the original if img2img not supported
+        return res.json({ url: null, message: "Brand styling not available, use the image as-is" });
+      }
+
+      const prediction = await startRes.json() as any;
+      if (prediction.output) {
+        const url = Array.isArray(prediction.output) ? prediction.output[0] : prediction.output;
+        return res.json({ url });
+      }
+
+      // Poll
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        const poll = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
+          headers: { Authorization: `Bearer ${replicateKey}` },
+        }).then(r => r.json()) as any;
+        if (poll.status === "succeeded") {
+          const url = Array.isArray(poll.output) ? poll.output[0] : poll.output;
+          return res.json({ url });
+        }
+        if (poll.status === "failed" || poll.status === "canceled") break;
+      }
+      res.json({ url: null, message: "Could not process image" });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   // ─── Meta ─────────────────────────────────────────────────────────────────
 
   app.get("/api/meta", (_req, res) => {
