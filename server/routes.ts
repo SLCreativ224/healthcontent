@@ -577,11 +577,24 @@ export async function registerRoutes(httpServer: Server, app: Express) {
         });
       }
 
-      // Build a rich DALL-E prompt incorporating brand identity
+      // Build a highly specific DALL-E prompt per style
       const colorContext = brandColors?.length
-        ? `Brand colors: ${brandColors.join(", ")}.`
+        ? `Incorporate these brand colors subtly: ${brandColors.filter(c => c && c !== '#ffffff').join(", ")}.`
         : "";
-      const fullPrompt = `Professional social media graphic for a healthcare practice called "${practiceName || "the practice"}". ${prompt}. ${colorContext} Style: ${style || "modern, clean, professional, high-end healthcare marketing"}. High quality, photorealistic or polished graphic design aesthetic. No text overlays.`;
+
+      const styleDirectives: Record<string, string> = {
+        "photorealistic": "Ultra-photorealistic DSLR photography, 85mm portrait lens, natural lighting, shallow depth of field, shot on Canon EOS R5, professional healthcare photography. Real people, real setting. NOT illustrated, NOT cartoon, NOT AI-looking.",
+        "editorial": "High-end editorial photography, Vogue/Harper's Bazaar aesthetic, perfect studio lighting, magazine cover quality, professional retouching, luxury healthcare brand feel.",
+        "warm-lifestyle": "Warm natural lifestyle photography, golden hour light, candid authentic moment, shot on film, soft bokeh background, approachable and human. Real people, natural colors.",
+        "clean-studio": "Clean white studio photography, professional lighting setup, minimal background, crisp shadows, product/portrait photography style, premium healthcare branding.",
+        "bold-graphic": "Modern bold graphic design, geometric shapes, strong typography layout (no actual words), vibrant brand colors, flat design with depth, inspired by Nike/Apple campaigns.",
+        "flat-icon": "Clean flat vector illustration, minimal line art, simple geometric icons, healthcare iconography, modern app icon aesthetic, white background with brand color accents. SVG-style clarity.",
+        "3d-render": "Premium 3D render, glass morphism, subtle neon glow, floating objects, dark background, Blender/Cinema4D quality, futuristic healthcare aesthetic, caustic light effects.",
+        "cinematic": "Cinematic photography, dramatic directional lighting, 2.39:1 aspect ratio feel, color graded, teal and orange tones mixed with brand colors, story-driven composition.",
+      };
+
+      const styleGuide = styleDirectives[style || "photorealistic"] || styleDirectives["photorealistic"];
+      const fullPrompt = `${styleGuide} Subject: ${prompt}. ${colorContext} For a professional healthcare practice social media post. No text, no words, no logos in the image. Square 1:1 format. Extremely high quality.`;
 
       const response = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
