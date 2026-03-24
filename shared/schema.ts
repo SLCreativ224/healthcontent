@@ -175,6 +175,27 @@ export const insertContentItemSchema = createInsertSchema(contentItems).omit({ i
 export type InsertContentItem = z.infer<typeof insertContentItemSchema>;
 export type ContentItem = typeof contentItems.$inferSelect;
 
+// ─── Generated Graphics ──────────────────────────────────────────────────────
+
+export const generatedGraphics = pgTable("generated_graphics", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  imageUrl: text("image_url").notNull(),         // DALL-E URL or data URL
+  thumbnailUrl: text("thumbnail_url"),           // smaller version for history
+  prompt: text("prompt"),                        // AI prompt used
+  style: text("style"),                          // style preset
+  template: text("template"),                    // template id
+  headline: text("headline"),
+  subtext: text("subtext"),
+  usedBranding: integer("used_branding").default(1), // 1 = yes, 0 = no
+  source: text("source").notNull().default("ai"), // 'ai' | 'template' | 'upload'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertGeneratedGraphicSchema = createInsertSchema(generatedGraphics).omit({ id: true, createdAt: true });
+export type InsertGeneratedGraphic = z.infer<typeof insertGeneratedGraphicSchema>;
+export type GeneratedGraphic = typeof generatedGraphics.$inferSelect;
+
 // ─── Before & After Items ─────────────────────────────────────────────────────
 
 export const BA_LAYOUTS = ["side-by-side", "stacked", "split-diagonal"] as const;

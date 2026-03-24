@@ -274,4 +274,25 @@ export class DrizzleStorage implements IStorage {
       .where(eq(tokenPurchases.userId, userId))
       .orderBy(desc(tokenPurchases.createdAt));
   }
+
+  // ─── Generated Graphics ───────────────────────────────────────────────────
+
+  async getGraphicsByUserId(userId: number) {
+    const { generatedGraphics } = await import("@shared/schema");
+    return db.select().from(generatedGraphics)
+      .where(eq(generatedGraphics.userId, userId))
+      .orderBy(desc(generatedGraphics.createdAt))
+      .limit(50);
+  }
+
+  async saveGraphic(data: any) {
+    const { generatedGraphics } = await import("@shared/schema");
+    const [created] = await db.insert(generatedGraphics).values(data).returning();
+    return created;
+  }
+
+  async deleteGraphic(id: number) {
+    const { generatedGraphics } = await import("@shared/schema");
+    await db.delete(generatedGraphics).where(eq(generatedGraphics.id, id));
+  }
 }

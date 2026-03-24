@@ -557,6 +557,42 @@ export async function registerRoutes(httpServer: Server, app: Express) {
     }
   });
 
+  // ─── Graphics History ───────────────────────────────────────────────────────
+
+  app.get("/api/graphics", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId as number;
+      const graphics = await (storage as any).getGraphicsByUserId(userId);
+      res.json(graphics);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
+  app.post("/api/graphics", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).userId as number;
+      const body = z.object({
+        imageUrl: z.string(),
+        thumbnailUrl: z.string().optional(),
+        prompt: z.string().optional(),
+        style: z.string().optional(),
+        template: z.string().optional(),
+        headline: z.string().optional(),
+        subtext: z.string().optional(),
+        usedBranding: z.number().optional(),
+        source: z.string().optional(),
+      }).parse(req.body);
+      const graphic = await (storage as any).saveGraphic({ userId, ...body });
+      res.json(graphic);
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
+  app.delete("/api/graphics/:id", requireAuth, async (req, res) => {
+    try {
+      await (storage as any).deleteGraphic(Number(req.params.id));
+      res.json({ ok: true });
+    } catch (err: any) { res.status(500).json({ message: err.message }); }
+  });
+
   // ─── AI: Image Generation (DALL-E 3) ─────────────────────────────────────
 
   app.post("/api/ai/image", requireAuth, async (req, res) => {
@@ -568,16 +604,17 @@ export async function registerRoutes(httpServer: Server, app: Express) {
         practiceName: z.string().optional(),
       }).parse(req.body);
 
-      const apiKey = process.env.OPENAI_API_KEY;
-      if (!apiKey) {
-        // Return a mock placeholder image URL when no API key
+      const replicateKey = process.env.REPLICATE_API_TOKEN;
+      const openaiKey = process.env.OPENAI_API_KEY;
+
+      if (!replicateKey && !openaiKey) {
         return res.json({
-          url: `https://placehold.co/1024x1024/6B5CE7/ffffff?text=AI+Image+%28Add+OpenAI+Key%29`,
+          url: `https://placehold.co/1024x1024/6B5CE7/ffffff?text=AI+Image+%28Add+API+Key%29`,
           revised_prompt: prompt,
         });
       }
 
-      // Build a highly specific DALL-E prompt per style
+      // Build a highly specific prompt per style
       const colorContext = brandColors?.length
         ? `Incorporate these brand colors subtly: ${brandColors.filter(c => c && c !== '#ffffff').join(", ")}.`
         : "";
@@ -594,13 +631,86 @@ export async function registerRoutes(httpServer: Server, app: Express) {
       };
 
       const styleGuide = styleDirectives[style || "photorealistic"] || styleDirectives["photorealistic"];
-      const fullPrompt = `${styleGuide} Subject: ${prompt}. ${colorContext} For a professional healthcare practice social media post. No text, no words, no logos in the image. Square 1:1 format. Extremely high quality.`;
 
+      // Variation seeds so each generation feels unique
+      const diversityHints = [
+        "diverse ethnicities, varied ages",
+        "authentic candid moment, not posed",
+        "unique and original, not stock photo",
+        "genuine emotion, natural expressions",
+        "documentary photography feel",
+        "fresh perspective, unexpected angle",
+        "real life authenticity, not generic",
+        "cinematic composition, rule of thirds",
+      ];
+      const variationSeed = diversityHints[Math.floor(Math.random() * diversityHints.length)];
+      const lightingVariants = ["soft natural window light", "warm golden hour light", "bright clinic lighting", "soft diffused light", "dramatic side lighting"];
+      const lightingHint = lightingVariants[Math.floor(Math.random() * lightingVariants.length)];
+
+      const fullPrompt = `${styleGuide} Subject: ${prompt}. ${colorContext} ${variationSeed}. ${lightingHint}. Professional healthcare social media post. No text, no words, no logos. Square 1:1 format. Extremely high quality. Unique and fresh, not stock photo.`;
+
+      // Use Flux Pro (Replicate) if available — far better photorealism than DALL-E
+      if (replicateKey) {
+        // Step 1: Start the prediction
+        const startRes = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-pro/predictions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${replicateKey}`,
+            "Prefer": "wait=60",
+          },
+          body: JSON.stringify({
+            input: {
+              prompt: fullPrompt,
+              width: 1024,
+              height: 1024,
+              steps: 25,
+              guidance: 3,
+              output_format: "webp",
+              output_quality: 90,
+              safety_tolerance: 2,
+            },
+          }),
+        });
+
+        if (!startRes.ok) {
+          const errText = await startRes.text();
+          throw new Error(`Flux Pro error: ${errText}`);
+        }
+
+        const prediction = await startRes.json() as any;
+
+        // If completed immediately
+        if (prediction.output) {
+          const url = Array.isArray(prediction.output) ? prediction.output[0] : prediction.output;
+          return res.json({ url, revised_prompt: fullPrompt });
+        }
+
+        // Step 2: Poll until done (max 60s)
+        const predId = prediction.id;
+        for (let i = 0; i < 30; i++) {
+          await new Promise(r => setTimeout(r, 2000));
+          const pollRes = await fetch(`https://api.replicate.com/v1/predictions/${predId}`, {
+            headers: { Authorization: `Bearer ${replicateKey}` },
+          });
+          const poll = await pollRes.json() as any;
+          if (poll.status === "succeeded") {
+            const url = Array.isArray(poll.output) ? poll.output[0] : poll.output;
+            return res.json({ url, revised_prompt: fullPrompt });
+          }
+          if (poll.status === "failed" || poll.status === "canceled") {
+            throw new Error(`Flux Pro generation ${poll.status}: ${poll.error || "unknown error"}`);
+          }
+        }
+        throw new Error("Flux Pro timed out after 60s");
+      }
+
+      // Fallback: DALL-E 3
       const response = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${openaiKey}`,
         },
         body: JSON.stringify({
           model: "dall-e-3",
